@@ -5,14 +5,8 @@
 #define BLOCK_SIZE 30
 
 
-// BOARD
-
-
 int board[ROWS][COLS] = {0};
 
-
-
-// PIECE STRUCT--
 
 typedef struct
 {
@@ -21,9 +15,6 @@ typedef struct
     int y;
 } Piece;
 
-
-
-// ALL 7 TETRIS SHAPES
 
 
 int shapes[7][4][4] =
@@ -86,8 +77,6 @@ int shapes[7][4][4] =
 };
 
 
-
-// DRAW CURRENT PIECE
 void DrawPiece(Piece *piece)
 {
     int startX = 50;
@@ -126,7 +115,6 @@ void DrawPiece(Piece *piece)
 }
 
 
-// DRAW BOARD
 
 void DrawBoard(void)
 {
@@ -175,8 +163,6 @@ void DrawBoard(void)
     }
 }
 
-
-// CHECK VALID POSITION
 
 int IsValidPosition(Piece *piece)
 {
@@ -227,8 +213,6 @@ int IsValidPosition(Piece *piece)
 }
 
 
-// LOCK PIECE
-
 void LockPiece(Piece *piece)
 {
     for (int row = 0; row < 4; row++)
@@ -253,9 +237,6 @@ void LockPiece(Piece *piece)
 }
 
 
-
-// SPAWN RANDOM PIECE
-
 void SpawnPiece(Piece *piece)
 {
     // Pick random shape from 0 to 6
@@ -271,13 +252,10 @@ void SpawnPiece(Piece *piece)
         }
     }
 
-    // Starting position
     piece->x = 3;
     piece->y = 0;
 }
 
-
-// ROTATE PIECE
 
 
 void RotatePiece(Piece *piece)
@@ -341,37 +319,25 @@ void RotatePiece(Piece *piece)
 }
 
 
-// MOVE PIECE DOWN
-
 void MovePieceDown(Piece *piece)
 {
-    // Try moving down
+
     piece->y++;
 
-    // If the new position is invalid
     if (!IsValidPosition(piece))
     {
-        // Undo movement
+    
         piece->y--;
 
-        // Lock current piece
         LockPiece(piece);
 
-        // Create a new random piece
         SpawnPiece(piece);
     }
 }
 
 
-// --------------------------------------------------
-// MAIN
-// --------------------------------------------------
-
 int main(void)
 {
-    // --------------------------------------------------
-    // WINDOW
-    // --------------------------------------------------
 
     InitWindow(
         800,
@@ -382,46 +348,27 @@ int main(void)
     SetTargetFPS(60);
 
 
-    // --------------------------------------------------
-    // RANDOM SEED
-    // --------------------------------------------------
-
     SetRandomSeed(
         (unsigned int)GetTime()
     );
-
-
-    // --------------------------------------------------
-    // CURRENT PIECE
-    // --------------------------------------------------
 
     Piece piece;
 
     SpawnPiece(&piece);
 
 
-    // --------------------------------------------------
-    // FALL TIMER
-    // --------------------------------------------------
 
     float fallTimer = 0.0f;
 
     float fallSpeed = 0.5f;
 
 
-    // --------------------------------------------------
-    // GAME LOOP
-    // --------------------------------------------------
 
 while (!WindowShouldClose())
 {
     // Timer
     fallTimer += GetFrameTime();
 
-
-    // ==============================================
-    // MOVE LEFT
-    // ==============================================
 
     if (IsKeyPressed(KEY_LEFT))
     {
@@ -434,9 +381,6 @@ while (!WindowShouldClose())
     }
 
 
-    // ==============================================
-    // MOVE RIGHT
-    // ==============================================
 
     if (IsKeyPressed(KEY_RIGHT))
     {
@@ -449,17 +393,13 @@ while (!WindowShouldClose())
     }
 
 
-  
-    // ROTATE
-
 
     if (IsKeyPressed(KEY_UP))
     {
         RotatePiece(&piece);
     }
 
-\
-    // SOFT DROP
+
 
 
     if (IsKeyPressed(KEY_DOWN))
@@ -469,7 +409,6 @@ while (!WindowShouldClose())
 
 
 
-    // AUTOMATIC FALLING
 
 
     if (fallTimer >= fallSpeed)
@@ -479,9 +418,6 @@ while (!WindowShouldClose())
         MovePieceDown(&piece);
     }
 
-
-  
-    // DRAW
 
 
     BeginDrawing();
