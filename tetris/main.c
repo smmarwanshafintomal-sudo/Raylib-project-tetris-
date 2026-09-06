@@ -1,12 +1,15 @@
 #include "raylib.h"
+#include <stdio.h>
 
 #define ROWS 20
 #define COLS 10
 #define BLOCK_SIZE 30
 
-
 int board[ROWS][COLS] = {0};
 
+int score=0;
+int gameover=0;
+int level=1;
 
 typedef struct
 {
@@ -14,7 +17,6 @@ typedef struct
     int x;
     int y;
 } Piece;
-
 
 
 int shapes[7][4][4] =
@@ -77,6 +79,8 @@ int shapes[7][4][4] =
 };
 
 
+
+
 void DrawPiece(Piece *piece)
 {
     int startX = 50;
@@ -116,6 +120,10 @@ void DrawPiece(Piece *piece)
 
 
 
+
+
+Color lockedpiececolor={200,0,0,255};
+
 void DrawBoard(void)
 {
     int startX = 50;
@@ -128,7 +136,6 @@ void DrawBoard(void)
             int x = startX + col * BLOCK_SIZE;
             int y = startY + row * BLOCK_SIZE;
 
-            // Locked block
             if (board[row][col] == 1)
             {
                 DrawRectangle(
@@ -136,10 +143,10 @@ void DrawBoard(void)
                     y,
                     BLOCK_SIZE,
                     BLOCK_SIZE,
-                    PURPLE
+                    lockedpiececolor
                 );
             }
-            // Empty cell
+
             else
             {
                 DrawRectangle(
@@ -151,7 +158,6 @@ void DrawBoard(void)
                 );
             }
 
-            // Cell border
             DrawRectangleLines(
                 x,
                 y,
@@ -164,43 +170,40 @@ void DrawBoard(void)
 }
 
 
+
+
+
 int IsValidPosition(Piece *piece)
 {
     for (int row = 0; row < 4; row++)
     {
         for (int col = 0; col < 4; col++)
         {
-            // Only check occupied cells
             if (piece->shape[row][col] == 1)
             {
                 int boardX = piece->x + col;
                 int boardY = piece->y + row;
 
-                // Left wall
                 if (boardX < 0)
                 {
                     return 0;
                 }
 
-                // Right wall
                 if (boardX >= COLS)
                 {
                     return 0;
                 }
 
-                // Top
                 if (boardY < 0)
                 {
                     return 0;
                 }
 
-                // Bottom
                 if (boardY >= ROWS)
                 {
                     return 0;
                 }
 
-                // Existing locked block
                 if (board[boardY][boardX] == 1)
                 {
                     return 0;
@@ -211,6 +214,9 @@ int IsValidPosition(Piece *piece)
 
     return 1;
 }
+
+
+
 
 
 void LockPiece(Piece *piece)
@@ -237,12 +243,45 @@ void LockPiece(Piece *piece)
 }
 
 
+
+
+
+int ClearLine()
+{ 
+    int clearedline=0;
+    for(int row=0;row<ROWS;row++)
+    {
+        int isfull=1;
+        for(int col=0;col<COLS;col++)
+        {
+            if(board[row][col]==0)
+            isfull=0;
+        }
+        if(isfull==1)
+        {
+            clearedline++;
+            for(int r=row;r>0;r--)
+            {
+                for(int col=0;col<COLS;col++)
+                board[r][col]=board[r-1][col];
+            }
+            for(int col=0;col<COLS;col++)
+            board[0][col]=0;
+        }
+
+    }
+    return clearedline;
+}
+
+
+
+
+
+
 void SpawnPiece(Piece *piece)
 {
-    // Pick random shape from 0 to 6
     int type = GetRandomValue(0, 6);
 
-    // Copy selected shape into piece
     for (int row = 0; row < 4; row++)
     {
         for (int col = 0; col < 4; col++)
@@ -251,10 +290,11 @@ void SpawnPiece(Piece *piece)
                 shapes[type][row][col];
         }
     }
-
     piece->x = 3;
     piece->y = 0;
 }
+
+
 
 
 
@@ -302,7 +342,6 @@ void RotatePiece(Piece *piece)
         piece->x = originalX;
         piece->y = originalY;
 
-        // small wall kick attempt
         for (int offset = -1; offset <= 1; offset++)
         {
             piece->x = originalX + offset;
@@ -319,6 +358,10 @@ void RotatePiece(Piece *piece)
 }
 
 
+
+
+
+
 void MovePieceDown(Piece *piece)
 {
 
@@ -331,77 +374,73 @@ void MovePieceDown(Piece *piece)
 
         LockPiece(piece);
 
+        score=score+100*ClearLine();
+        level=1+score/200;
+
         SpawnPiece(piece);
+
+        if(!IsValidPosition(piece))
+        {
+            gameover=1;
+        }
     }
 }
+
+
+
+
+
 
 
 int main(void)
 {
 
-    InitWindow(
-        800,
-        650,
-        "MY NEW TETRIS"
-    );
+    InitWindow(800,650,"MY NEW TETRIS");
 
     SetTargetFPS(60);
 
-
-    SetRandomSeed(
-        (unsigned int)GetTime()
-    );
+    SetRandomSeed((unsigned int)GetTime());
 
     Piece piece;
 
     SpawnPiece(&piece);
 
 
-
     float fallTimer = 0.0f;
-
     float fallSpeed = 0.5f;
 
 
 
 while (!WindowShouldClose())
 {
-    // Timer
+    
     fallTimer += GetFrameTime();
+    fallSpeed=0.5-(level-1)*0.05 ;
+    if(fallSpeed<0.1)
+    fallSpeed=0.1;
+
 
 
     if (IsKeyPressed(KEY_LEFT))
     {
         piece.x--;
-
         if (!IsValidPosition(&piece))
         {
             piece.x++;
         }
     }
-
-
-
     if (IsKeyPressed(KEY_RIGHT))
     {
         piece.x++;
-
         if (!IsValidPosition(&piece))
         {
             piece.x--;
         }
     }
-
-
-
     if (IsKeyPressed(KEY_UP))
     {
         RotatePiece(&piece);
     }
-
-
-
-
     if (IsKeyPressed(KEY_DOWN))
     {
         MovePieceDown(&piece);
@@ -409,12 +448,9 @@ while (!WindowShouldClose())
 
 
 
-
-
     if (fallTimer >= fallSpeed)
     {
         fallTimer = 0.0f;
-
         MovePieceDown(&piece);
     }
 
@@ -424,6 +460,18 @@ while (!WindowShouldClose())
 
     ClearBackground(BLACK);
 
+    if(gameover==1)
+    {
+        DrawText("GAME OVER!",250,200,50,RED);
+        char arr[50];
+        sprintf(arr,"SCORE=%d",score);
+        DrawText(arr,250,255,35,BLUE);
+
+    }
+
+
+    else
+   {
     DrawText(
         "HELLO TETRIS",
         400,
@@ -432,11 +480,22 @@ while (!WindowShouldClose())
         RED
     );
 
+    char arr[50];
+    sprintf(arr,"SCORE=%d",score);
+    DrawText(arr,400,100,40,BLUE);
+
+    char brr[50];
+    sprintf(brr,"LEVEL=%d",level);
+    DrawText(brr,400,150,40,YELLOW);
+
     DrawBoard();
 
     DrawPiece(&piece);
+   }  
+
 
     EndDrawing();
+
 }
 
     CloseWindow();
