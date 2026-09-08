@@ -10,12 +10,14 @@ int board[ROWS][COLS] = {0};
 int score=0;
 int gameover=0;
 int level=1;
+int gamestarted = 0;
 
 typedef struct
 {
     int shape[4][4];
     int x;
     int y;
+    Color color;
 } Piece;
 
 
@@ -77,8 +79,18 @@ int shapes[7][4][4] =
         {0, 0, 0, 0}
     }
 };
+// color for each piece
 
-
+Color pieceColors[7] =
+{
+    SKYBLUE,    // I
+    YELLOW,     // O
+    PURPLE,     // T
+    GREEN,      // S
+    RED,        // Z
+    BLUE,       // J
+    ORANGE      // L
+};
 
 
 void DrawPiece(Piece *piece)
@@ -103,7 +115,7 @@ void DrawPiece(Piece *piece)
                     y,
                     BLOCK_SIZE,
                     BLOCK_SIZE,
-                    PURPLE
+                    piece->color
                 );
 
                 DrawRectangleLines(
@@ -117,9 +129,6 @@ void DrawPiece(Piece *piece)
         }
     }
 }
-
-
-
 
 
 Color lockedpiececolor={200,0,0,255};
@@ -168,9 +177,6 @@ void DrawBoard(void)
         }
     }
 }
-
-
-
 
 
 int IsValidPosition(Piece *piece)
@@ -244,7 +250,7 @@ void LockPiece(Piece *piece)
 
 
 
-
+// clear the line
 
 int ClearLine()
 { 
@@ -273,10 +279,7 @@ int ClearLine()
     return clearedline;
 }
 
-
-
-
-
+// spawning a new piece
 
 void SpawnPiece(Piece *piece)
 {
@@ -292,11 +295,30 @@ void SpawnPiece(Piece *piece)
     }
     piece->x = 3;
     piece->y = 0;
+
+    piece->color = pieceColors[type];
 }
+// restart the game
 
+void RestartGame(Piece *piece)
+{
+    // Clear the board
+    for (int row = 0; row < ROWS; row++)
+    {
+        for (int col = 0; col < COLS; col++)
+        {
+            board[row][col] = 0;
+        }
+    }
 
+    // Reset game variables
+    score = 0;
+    level = 1;
+    gameover = 0;
 
-
+    // Spawn a new piece
+    SpawnPiece(piece);
+}
 
 void RotatePiece(Piece *piece)
 {
@@ -359,9 +381,6 @@ void RotatePiece(Piece *piece)
 
 
 
-
-
-
 void MovePieceDown(Piece *piece)
 {
 
@@ -387,15 +406,14 @@ void MovePieceDown(Piece *piece)
 }
 
 
-
-
-
-
-
 int main(void)
 {
 
     InitWindow(800,650,"MY NEW TETRIS");
+
+    InitAudioDevice();
+
+    Music music = LoadMusicStream("music.mp3");
 
     SetTargetFPS(60);
 
@@ -405,7 +423,6 @@ int main(void)
 
     SpawnPiece(&piece);
 
-
     float fallTimer = 0.0f;
     float fallSpeed = 0.5f;
 
@@ -413,62 +430,102 @@ int main(void)
 
 while (!WindowShouldClose())
 {
-    
+
+    // the user will exit
+    if (IsKeyPressed(KEY_X))
+    {
+        break;
+    }
+
+    // game start
+
+    if (gamestarted == 0 && IsKeyPressed(KEY_ENTER))
+
+       {
+           gamestarted = 1;
+           PlayMusicStream(music);
+       }
+     // game over and restart
+       if (gameover == 1 && IsKeyPressed(KEY_R))
+     {
+         RestartGame(&piece);
+         PlayMusicStream(music);
+     }
+    // game starts
+    if (gamestarted == 1 && gameover == 0)
+{
     fallTimer += GetFrameTime();
-    fallSpeed=0.5-(level-1)*0.05 ;
-    if(fallSpeed<0.1)
-    fallSpeed=0.1;
 
+    fallSpeed = 0.5 - (level - 1) * 0.05;
 
+    if (fallSpeed < 0.1)
+        fallSpeed = 0.1;
+    
+    UpdateMusicStream(music);
 
+    if (!IsMusicStreamPlaying(music))
+    {
+        PlayMusicStream(music);
+    }
+    
     if (IsKeyPressed(KEY_LEFT))
     {
         piece.x--;
+
         if (!IsValidPosition(&piece))
         {
             piece.x++;
         }
     }
+
     if (IsKeyPressed(KEY_RIGHT))
     {
         piece.x++;
+
         if (!IsValidPosition(&piece))
         {
             piece.x--;
         }
     }
+
     if (IsKeyPressed(KEY_UP))
     {
         RotatePiece(&piece);
     }
+
     if (IsKeyPressed(KEY_DOWN))
     {
         MovePieceDown(&piece);
     }
-
-
 
     if (fallTimer >= fallSpeed)
     {
         fallTimer = 0.0f;
         MovePieceDown(&piece);
     }
-
-
+}
 
     BeginDrawing();
 
     ClearBackground(BLACK);
 
-    if(gameover==1)
+    if (gamestarted == 0)
+{
+    DrawText("MY NEW TETRIS", 220, 150, 50, RED);
+    DrawText("PRESS ENTER TO START", 220, 300, 30, GREEN);
+}
+
+    else if(gameover==1)
     {
         DrawText("GAME OVER!",250,200,50,RED);
         char arr[50];
         sprintf(arr,"SCORE=%d",score);
         DrawText(arr,250,255,35,BLUE);
+        
+        DrawText("PRESS R TO RESTART", 220, 320, 25, GREEN);
 
+         StopMusicStream(music);
     }
-
 
     else
    {
@@ -482,11 +539,14 @@ while (!WindowShouldClose())
 
     char arr[50];
     sprintf(arr,"SCORE=%d",score);
-    DrawText(arr,400,100,40,BLUE);
+    DrawText(arr,400,150,40,BLUE);
 
     char brr[50];
     sprintf(brr,"LEVEL=%d",level);
-    DrawText(brr,400,150,40,YELLOW);
+    DrawText(brr,400,250,40,YELLOW);
+     
+    DrawText("Press X to exit",400,350,40,GREEN);
+    
 
     DrawBoard();
 
@@ -497,6 +557,10 @@ while (!WindowShouldClose())
     EndDrawing();
 
 }
+
+    UnloadMusicStream(music);
+
+    CloseAudioDevice();
 
     CloseWindow();
 
