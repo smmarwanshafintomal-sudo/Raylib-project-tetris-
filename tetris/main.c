@@ -21,6 +21,7 @@ typedef struct
 } Piece;
 
 
+
 int shapes[7][4][4] =
 {
     // I
@@ -79,18 +80,22 @@ int shapes[7][4][4] =
         {0, 0, 0, 0}
     }
 };
-// color for each piece
 
+
+// color for each piece
 Color pieceColors[7] =
 {
-    SKYBLUE,    // I
+    VIOLET,     // I
     YELLOW,     // O
     PURPLE,     // T
     GREEN,      // S
-    RED,        // Z
+    PINK,       // Z
     BLUE,       // J
     ORANGE      // L
 };
+
+
+
 
 
 void DrawPiece(Piece *piece)
@@ -131,7 +136,10 @@ void DrawPiece(Piece *piece)
 }
 
 
-Color lockedpiececolor={200,0,0,255};
+
+
+
+Color lockedpiececolor={220,0,0,255};
 
 void DrawBoard(void)
 {
@@ -177,6 +185,10 @@ void DrawBoard(void)
         }
     }
 }
+
+
+
+
 
 
 int IsValidPosition(Piece *piece)
@@ -250,8 +262,9 @@ void LockPiece(Piece *piece)
 
 
 
-// clear the line
 
+
+// clear the line
 int ClearLine()
 { 
     int clearedline=0;
@@ -279,8 +292,11 @@ int ClearLine()
     return clearedline;
 }
 
-// spawning a new piece
 
+
+
+
+// spawning a new piece
 void SpawnPiece(Piece *piece)
 {
     int type = GetRandomValue(0, 6);
@@ -298,8 +314,11 @@ void SpawnPiece(Piece *piece)
 
     piece->color = pieceColors[type];
 }
-// restart the game
 
+
+
+
+// restart the game
 void RestartGame(Piece *piece)
 {
     // Clear the board
@@ -319,6 +338,9 @@ void RestartGame(Piece *piece)
     // Spawn a new piece
     SpawnPiece(piece);
 }
+
+
+
 
 void RotatePiece(Piece *piece)
 {
@@ -406,6 +428,11 @@ void MovePieceDown(Piece *piece)
 }
 
 
+
+
+
+
+//------------------------------------------------------------------------------------------------------------
 int main(void)
 {
 
@@ -413,7 +440,9 @@ int main(void)
 
     InitAudioDevice();
 
-    Music music = LoadMusicStream("music.mp3");
+    Music music = LoadMusicStream("music_2.mp3");
+    Music gameover_sound = LoadMusicStream("heavenly_gameover.mp3");
+    gameover_sound.looping=0;
 
     SetTargetFPS(60);
 
@@ -426,7 +455,7 @@ int main(void)
     float fallTimer = 0.0f;
     float fallSpeed = 0.5f;
 
-
+int gameover_sound_playback=1;
 
 while (!WindowShouldClose())
 {
@@ -450,6 +479,11 @@ while (!WindowShouldClose())
      {
          RestartGame(&piece);
          PlayMusicStream(music);
+     }
+     if(gameover==1&& gameover_sound_playback==1)
+     {
+        PlayMusicStream(gameover_sound);
+        gameover_sound_playback=0;
      }
     // game starts
     if (gamestarted == 1 && gameover == 0)
@@ -525,6 +559,7 @@ while (!WindowShouldClose())
         DrawText("PRESS R TO RESTART", 220, 320, 25, GREEN);
 
          StopMusicStream(music);
+         UpdateMusicStream(gameover_sound);
     }
 
     else
@@ -559,6 +594,7 @@ while (!WindowShouldClose())
 }
 
     UnloadMusicStream(music);
+    UnloadMusicStream(gameover_sound);
 
     CloseAudioDevice();
 
