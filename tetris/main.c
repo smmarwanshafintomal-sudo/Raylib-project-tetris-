@@ -11,6 +11,7 @@ int score=0;
 int gameover=0;
 int level=1;
 int gamestarted = 0;
+int nextpiecetype=0;
 
 typedef struct
 {
@@ -82,7 +83,6 @@ int shapes[7][4][4] =
 };
 
 
-// color for each piece
 Color pieceColors[7] =
 {
     VIOLET,     // I
@@ -93,6 +93,36 @@ Color pieceColors[7] =
     BLUE,       // J
     ORANGE      // L
 };
+
+
+
+
+
+void DrawBlockWithShade(int x,int y,Color color)
+{
+    DrawRectangle(x,y,BLOCK_SIZE,BLOCK_SIZE,color);
+
+    Color lightShade={
+                       (color.r+255)/2,
+                       (color.g+255)/2,
+                       (color.b+255)/2,
+                       255
+                     };
+
+    Color darkShade={
+                       color.r/2,
+                       color.g/2,
+                       color.b/2,
+                       255
+                     };
+
+
+    DrawRectangle(x,y,BLOCK_SIZE,5,lightShade);
+    DrawRectangle(x,y+BLOCK_SIZE-5,BLOCK_SIZE,5,darkShade);
+
+    DrawRectangleLines(x,y,BLOCK_SIZE,BLOCK_SIZE,BLACK);
+}
+
 
 
 
@@ -115,24 +145,34 @@ void DrawPiece(Piece *piece)
                 int y = startY +
                         (piece->y + row) * BLOCK_SIZE;
 
-                DrawRectangle(
-                    x,
-                    y,
-                    BLOCK_SIZE,
-                    BLOCK_SIZE,
-                    piece->color
-                );
-
-                DrawRectangleLines(
-                    x,
-                    y,
-                    BLOCK_SIZE,
-                    BLOCK_SIZE,
-                    BLACK
-                );
+                DrawBlockWithShade(x,y,piece->color);
             }
         }
     }
+}
+
+
+
+
+
+void DrawNextBlockPreview(int Type)
+{
+   int startX=500;
+   int startY=420;
+
+   for(int row=0;row<4;row++)
+   {
+    for(int col=0;col<4;col++)
+    {
+        if(shapes[Type][row][col]==1)
+        {
+            int x=startX+col*30;
+            int y=startY+row*30;
+
+            DrawBlockWithShade(x,y,pieceColors[Type]);
+        }
+    }
+   }
 }
 
 
@@ -146,6 +186,9 @@ void DrawBoard(void)
     int startX = 50;
     int startY = 20;
 
+
+    DrawRectangleLinesEx((Rectangle){50-5,20-5,10*30+2*5,20*30+2*5},5,(Color){0,50,100,255});
+
     for (int row = 0; row < ROWS; row++)
     {
         for (int col = 0; col < COLS; col++)
@@ -155,13 +198,7 @@ void DrawBoard(void)
 
             if (board[row][col] == 1)
             {
-                DrawRectangle(
-                    x,
-                    y,
-                    BLOCK_SIZE,
-                    BLOCK_SIZE,
-                    lockedpiececolor
-                );
+                DrawBlockWithShade(x,y,lockedpiececolor);
             }
 
             else
@@ -173,7 +210,6 @@ void DrawBoard(void)
                     BLOCK_SIZE,
                     DARKGRAY
                 );
-            }
 
             DrawRectangleLines(
                 x,
@@ -182,9 +218,17 @@ void DrawBoard(void)
                 BLOCK_SIZE,
                 BLACK
             );
+            }
         }
     }
+
+   DrawNextBlockPreview(nextpiecetype);
+
 }
+
+
+
+
 
 
 
@@ -296,10 +340,11 @@ int ClearLine()
 
 
 
-// spawning a new piece
+
 void SpawnPiece(Piece *piece)
 {
-    int type = GetRandomValue(0, 6);
+    int type = nextpiecetype;
+    nextpiecetype=GetRandomValue(0, 6);
 
     for (int row = 0; row < 4; row++)
     {
@@ -440,6 +485,8 @@ int main(void)
 
     InitAudioDevice();
 
+    Font gamefont=LoadFont("Fredoka-Bold.ttf");
+
     Music music = LoadMusicStream("music_2.mp3");
     Music gameover_sound = LoadMusicStream("heavenly_gameover.mp3");
     gameover_sound.looping=0;
@@ -494,7 +541,14 @@ while (!WindowShouldClose())
 
     if (fallSpeed < 0.1)
         fallSpeed = 0.1;
+
+
+    if(IsKeyDown(KEY_SPACE))
+      {
+         fallSpeed=0.04;
+      }
     
+
     UpdateMusicStream(music);
 
     if (!IsMusicStreamPlaying(music))
@@ -532,6 +586,7 @@ while (!WindowShouldClose())
         MovePieceDown(&piece);
     }
 
+
     if (fallTimer >= fallSpeed)
     {
         fallTimer = 0.0f;
@@ -541,22 +596,22 @@ while (!WindowShouldClose())
 
     BeginDrawing();
 
-    ClearBackground(BLACK);
+    DrawRectangleGradientV(0,0,800,650,(Color){20, 20,55, 255},(Color){0,0,0,255});
 
     if (gamestarted == 0)
 {
-    DrawText("MY NEW TETRIS", 220, 150, 50, RED);
-    DrawText("PRESS ENTER TO START", 220, 300, 30, GREEN);
+    DrawTextEx(gamefont,"MY NEW TETRIS",(Vector2){210,150}, 70,2, RED);
+    DrawTextEx(gamefont,"PRESS ENTER TO START",(Vector2){225,250},40,2, GREEN);
 }
 
     else if(gameover==1)
     {
-        DrawText("GAME OVER!",250,200,50,RED);
+        DrawTextEx(gamefont,"GAME OVER!",(Vector2){185,170},90,2,RED);
         char arr[50];
         sprintf(arr,"SCORE=%d",score);
-        DrawText(arr,250,255,35,BLUE);
+        DrawTextEx(gamefont,arr,(Vector2){185,240},60,2,BLUE);
         
-        DrawText("PRESS R TO RESTART", 220, 320, 25, GREEN);
+        DrawTextEx(gamefont,"PRESS R TO RESTART", (Vector2){185,310}, 50,2, GREEN);
 
          StopMusicStream(music);
          UpdateMusicStream(gameover_sound);
@@ -564,23 +619,24 @@ while (!WindowShouldClose())
 
     else
    {
-    DrawText(
+    DrawTextEx(
+        gamefont,
         "HELLO TETRIS",
-        400,
-        50,
-        50,
+        (Vector2){400,50},
+        60,
+        2,
         RED
     );
 
     char arr[50];
     sprintf(arr,"SCORE=%d",score);
-    DrawText(arr,400,150,40,BLUE);
+    DrawTextEx(gamefont,arr,(Vector2){400,135},40,2,BLUE);
 
     char brr[50];
     sprintf(brr,"LEVEL=%d",level);
-    DrawText(brr,400,250,40,YELLOW);
+    DrawTextEx(gamefont,brr,(Vector2){400,180},40,2,YELLOW);
      
-    DrawText("Press X to exit",400,350,40,GREEN);
+    DrawTextEx(gamefont,"Press X to exit",(Vector2){400,225},40,2,GREEN);
     
 
     DrawBoard();
