@@ -389,51 +389,51 @@ void RestartGame(Piece *piece)
 
 void RotatePiece(Piece *piece)
 {
-    int rotated[4][4] = {0};
-    int original[4][4] = {0};
-    int originalX = piece->x;
-    int originalY = piece->y;
+    int rotated[4][4]={0};
+    int original[4][4]={0};
+    int originalX=piece->x;
+    int originalY=piece->y;
 
-    for (int row = 0; row < 4; row++)
+    for (int row=0;row<4;row++)
     {
-        for (int col = 0; col < 4; col++)
+        for (int col=0;col<4;col++)
         {
-            original[row][col] = piece->shape[row][col];
+            original[row][col]=piece->shape[row][col];
         }
     }
 
-    for (int row = 0; row < 4; row++)
+    for (int row=0;row<4;row++)
     {
-        for (int col = 0; col < 4; col++)
+        for (int col=0;col<4;col++)
         {
-            rotated[col][3 - row] = piece->shape[row][col];
+            rotated[col][3-row]=piece->shape[row][col];
         }
     }
 
-    for (int row = 0; row < 4; row++)
+    for (int row=0;row<4;row++)
     {
-        for (int col = 0; col < 4; col++)
+        for (int col=0;col<4;col++)
         {
-            piece->shape[row][col] = rotated[row][col];
+            piece->shape[row][col]=rotated[row][col];
         }
     }
 
     if (!IsValidPosition(piece))
     {
-        for (int row = 0; row < 4; row++)
+        for (int row=0;row<4;row++)
         {
-            for (int col = 0; col < 4; col++)
+            for (int col=0;col<4;col++)
             {
-                piece->shape[row][col] = original[row][col];
+                piece->shape[row][col]=original[row][col];
             }
         }
 
-        piece->x = originalX;
-        piece->y = originalY;
+        piece->x=originalX;
+        piece->y=originalY;
 
-        for (int offset = -1; offset <= 1; offset++)
+        for (int offset=-1;offset<=1;offset++)
         {
-            piece->x = originalX + offset;
+            piece->x=originalX+offset;
 
             if (IsValidPosition(piece))
             {
@@ -441,8 +441,8 @@ void RotatePiece(Piece *piece)
             }
         }
 
-        piece->x = originalX;
-        piece->y = originalY;
+        piece->x=originalX;
+        piece->y=originalY;
     }
 }
 
@@ -532,12 +532,14 @@ while (!WindowShouldClose())
         PlayMusicStream(gameover_sound);
         gameover_sound_playback=0;
      }
-    // game starts
-    if (gamestarted == 1 && gameover == 0)
-{
-    fallTimer += GetFrameTime();
 
-    fallSpeed = 0.5 - (level - 1) * 0.05;
+     
+    // game starts
+if (gamestarted==1 && gameover==0)
+{
+    fallTimer+=GetFrameTime();
+    fallSpeed=0.5-(level-1)*0.05;
+
 
     if (fallSpeed < 0.1)
         fallSpeed = 0.1;
@@ -547,16 +549,22 @@ while (!WindowShouldClose())
       {
          fallSpeed=0.04;
       }
+
+
+      if(IsKeyPressed(KEY_N))
+      {
+        nextpiecetype=GetRandomValue(0,6);
+      }
     
 
     UpdateMusicStream(music);
 
-    if (!IsMusicStreamPlaying(music))
+    if(!IsMusicStreamPlaying(music))
     {
         PlayMusicStream(music);
     }
     
-    if (IsKeyPressed(KEY_LEFT))
+    if(IsKeyPressed(KEY_LEFT))
     {
         piece.x--;
 
@@ -566,7 +574,7 @@ while (!WindowShouldClose())
         }
     }
 
-    if (IsKeyPressed(KEY_RIGHT))
+    if(IsKeyPressed(KEY_RIGHT))
     {
         piece.x++;
 
@@ -576,18 +584,18 @@ while (!WindowShouldClose())
         }
     }
 
-    if (IsKeyPressed(KEY_UP))
+    if(IsKeyPressed(KEY_UP))
     {
         RotatePiece(&piece);
     }
 
-    if (IsKeyPressed(KEY_DOWN))
+    if(IsKeyPressed(KEY_DOWN))
     {
         MovePieceDown(&piece);
     }
 
 
-    if (fallTimer >= fallSpeed)
+    if(fallTimer>=fallSpeed)
     {
         fallTimer = 0.0f;
         MovePieceDown(&piece);
@@ -598,7 +606,7 @@ while (!WindowShouldClose())
 
     DrawRectangleGradientV(0,0,800,650,(Color){20, 20,55, 255},(Color){0,0,0,255});
 
-    if (gamestarted == 0)
+    if(gamestarted==0)
 {
     DrawTextEx(gamefont,"MY NEW TETRIS",(Vector2){210,150}, 70,2, RED);
     DrawTextEx(gamefont,"PRESS ENTER TO START",(Vector2){225,250},40,2, GREEN);
