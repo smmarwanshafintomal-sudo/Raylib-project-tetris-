@@ -18,6 +18,7 @@ int gameover = 0;
 int level = 1;
 int nextpiecetype = 0;
 int muted = 0;
+int paused=0;
 
 /* -------------------- Game states -------------------- */
 typedef enum {
@@ -79,7 +80,7 @@ int shapes[7][4][4] =
 
 Color pieceColors[7] =
 {
-    VIOLET, YELLOW, PURPLE, GREEN, PINK, BLUE, ORANGE
+    VIOLET, YELLOW, RED, GREEN, PINK, BLUE, ORANGE
 };
 
 
@@ -630,7 +631,7 @@ void DrawCredits(void)
     DrawTextCentered("CREDITS", 70, 60, YELLOW);
 
     DrawTextCentered("TETRIS", 180, 36, WHITE);
-    DrawTextCentered("Programming & Game Design: S.M. Marwan Shafin Tomal", 240, 24, LIGHTGRAY);
+    DrawTextCentered("Programming & Game Design: S.M. Marwan Shafin Tomal & Tayeaba", 240, 24, LIGHTGRAY);
     DrawTextCentered("Engine / Framework: raylib", 285, 24, LIGHTGRAY);
     DrawTextCentered("Font: Fredoka-Bold.ttf (external asset)", 330, 24, LIGHTGRAY);
     DrawTextCentered("Music: music.mp3 (external asset)", 375, 24, LIGHTGRAY);
@@ -702,19 +703,15 @@ void DrawPlaying(Piece *piece)
     DrawText(TextFormat("DIFFICULTY: %s", DifficultyName(difficulty)),
              400, 210, 24, GREEN);
 
-    DrawText("M: mute/unmute", 400, 255, 22, LIGHTGRAY);
-    DrawText("X: exit", 400, 285, 22, LIGHTGRAY);
+
+    DrawText("P: pause/resume",400,255,22,LIGHTGRAY);
+    DrawText("M: mute/unmute", 400, 285, 22, LIGHTGRAY);
+    DrawText("X: exit", 400, 315, 22, LIGHTGRAY);
 
     DrawBoard();
     DrawPiece(piece);
     DrawNextBlockPreview(nextpiecetype);
 }
-
-
-
-
-
-
 
 
 
@@ -748,7 +745,7 @@ int main(void)
 
     if (FileExists("music.mp3"))
     {
-        music = LoadMusicStream("music.mp3");
+        music = LoadMusicStream("music_2.mp3");
         music.looping = true;
         musicLoaded = true;
     }
@@ -762,6 +759,7 @@ int main(void)
 
     LoadLeaderboard();
 
+
     Piece piece;
     nextpiecetype = GetRandomValue(0, 6);
     SpawnPiece(&piece);
@@ -772,6 +770,7 @@ int main(void)
 
     while (!WindowShouldClose())
     {
+
         /* -------------------- Global controls -------------------- */
         if (IsKeyPressed(KEY_M))
 {
@@ -781,6 +780,7 @@ int main(void)
 
         if (gameState == STATE_MENU)
         {
+
             if (IsKeyPressed(KEY_DOWN))
                 menuSelection = (menuSelection + 1) % 6;
             if (IsKeyPressed(KEY_UP))
@@ -864,6 +864,25 @@ int main(void)
         }
         else if (gameState == STATE_PLAYING)
         {
+            if(IsKeyPressed(KEY_P))
+            {
+                if(paused==0)
+                   paused=1;
+                else 
+                  paused=0;
+
+                if(paused==1)
+                {
+                    if(musicLoaded) PauseMusicStream(music);
+                }
+                else
+                {
+                    if(musicLoaded) ResumeMusicStream(music);
+                }
+            }
+
+         if(paused==0)
+         {
             if (IsKeyPressed(KEY_X))
             {
                 if (musicLoaded) StopMusicStream(music);
@@ -899,6 +918,12 @@ int main(void)
                 fallTimer = 0.0f;
             }
 
+
+            if(IsKeyPressed(KEY_N))
+            {
+                nextpiecetype=GetRandomValue(0,6);
+            }
+
             float fallSpeed = GetBaseFallSpeed();
             if (IsKeyDown(KEY_SPACE))
                 fallSpeed = 0.035f;
@@ -909,7 +934,7 @@ int main(void)
                 fallTimer = 0.0f;
                 MovePieceDown(&piece);
             }
-
+          
             if (gameover)
             {
                 if (musicLoaded) StopMusicStream(music);
@@ -930,6 +955,7 @@ int main(void)
 
                 gameState = STATE_SCORE_RESULT;
             }
+          }
         }
         else if (gameState == STATE_SCORE_RESULT)
         {
