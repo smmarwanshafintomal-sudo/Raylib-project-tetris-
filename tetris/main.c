@@ -761,7 +761,7 @@ int main(void)
 
 
     Piece piece;
-    nextpiecetype = GetRandomValue(0, 6);
+    nextpiecetype =  GetRandomValue(0, 6);
     SpawnPiece(&piece);
 
     float fallTimer = 0.0f;
