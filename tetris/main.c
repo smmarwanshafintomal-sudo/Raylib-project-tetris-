@@ -763,7 +763,7 @@ int main(void)
     LoadLeaderboard();
 
     Piece piece;
-    nextpiecetype = GetRandomValue(0, 6);
+    nextpiecetype =  GetRandomValue(0, 6);
     SpawnPiece(&piece);
 
     float fallTimer = 0.0f;
