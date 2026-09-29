@@ -20,7 +20,9 @@ int nextpiecetype = 0;
 int muted = 0;
 int paused=0;
 
-/* -------------------- Game states -------------------- */
+
+
+
 typedef enum {
     STATE_MENU,
     STATE_DIFFICULTY,
@@ -34,23 +36,17 @@ typedef enum {
 
 GameState gameState = STATE_MENU;
 
-/* -------------------- Difficulty -------------------- */
-typedef enum {
-    EASY,
-    MEDIUM,
-    HARD
-} Difficulty;
 
-Difficulty difficulty = MEDIUM;
 
-const char *DifficultyName(Difficulty d)
-{
-    if (d == EASY) return "EASY";
-    if (d == HARD) return "HARD";
-    return "MEDIUM";
-}
 
-/* -------------------- Piece -------------------- */
+int difficulty = 1;  
+const char *diffName[3] = {"EASY", "MEDIUM", "HARD"};
+float baseSpeed[3] = {0.75, 0.50, 0.35};
+
+
+
+
+
 typedef struct
 {
     int shape[4][4];
@@ -60,21 +56,24 @@ typedef struct
     Color color;
 } Piece;
 
+
+
+
 int shapes[7][4][4] =
 {
-    /* I */
+    //I
     {{1,1,1,1},{0,0,0,0},{0,0,0,0},{0,0,0,0}},
-    /* O */
+    //O
     {{0,1,1,0},{0,1,1,0},{0,0,0,0},{0,0,0,0}},
-    /* T */
+    //T
     {{0,1,0,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}},
-    /* S */
+    //S
     {{0,1,1,0},{1,1,0,0},{0,0,0,0},{0,0,0,0}},
-    /* Z */
+    //Z
     {{1,1,0,0},{0,1,1,0},{0,0,0,0},{0,0,0,0}},
-    /* J */
+    //J
     {{1,0,0,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}},
-    /* L */
+    //L
     {{0,0,1,0},{1,1,1,0},{0,0,0,0},{0,0,0,0}}
 };
 
@@ -84,7 +83,10 @@ Color pieceColors[7] =
 };
 
 
-/* -------------------- Leaderboard -------------------- */
+
+
+
+
 typedef struct
 {
     char name[PLAYER_NAME_MAX];
@@ -92,86 +94,53 @@ typedef struct
 } ScoreEntry;
 
 ScoreEntry leaderboard[MAX_SCORES];
-int leaderboardCount = 0;
 
 char playerName[PLAYER_NAME_MAX] = "";
-int playerNameLength = 0;
-bool scoreSavedForCurrentGame = false;
 
-void SortLeaderboard(void);
 
-void ResetLeaderboardMemory(void)
-{
-    leaderboardCount = 0;
-    for (int i = 0; i < MAX_SCORES; i++)
-    {
-        leaderboard[i].name[0] = '\0';
-        leaderboard[i].score = 0;
-    }
-}
+
+
 
 void SaveLeaderboard(void)
 {
     FILE *file = fopen(SCORE_FILE, "w");
     if (!file) return;
-
-    for (int i = 0; i < leaderboardCount && i < MAX_SCORES; i++)
-        fprintf(file, "%s\t%d\n", leaderboard[i].name, leaderboard[i].score);
-
+    for (int i = 0; i < MAX_SCORES; i++)
+        if (leaderboard[i].score > 0)
+            fprintf(file, "%s %d\n", leaderboard[i].name, leaderboard[i].score);
     fclose(file);
 }
+
+
+
 
 void LoadLeaderboard(void)
 {
-    ResetLeaderboardMemory();
+    for (int i = 0; i < MAX_SCORES; i++)
+    {
+        leaderboard[i].name[0] = '\0';
+        leaderboard[i].score = 0;
+    }
 
     FILE *file = fopen(SCORE_FILE, "r");
-    if (!file) return;
+    if (!file) return;          
 
-    char line[128];
-
-    while (leaderboardCount < MAX_SCORES && fgets(line, sizeof(line), file))
-    {
-        char loadedName[PLAYER_NAME_MAX] = "";
-        int loadedScore;
-        char *tab = strrchr(line, '\t');
-
-        if (tab)
-        {
-            *tab = '\0';
-            if (sscanf(tab + 1, "%d", &loadedScore) != 1)
-                continue;
-
-            strncpy(loadedName, line, PLAYER_NAME_MAX - 1);
-            loadedName[PLAYER_NAME_MAX - 1] = '\0';
-        }
-        else
-        {
-            /* Backward-compatible with the original: NAME SCORE format. */
-            if (sscanf(line, "%23s %d", loadedName, &loadedScore) != 2)
-                continue;
-        }
-
-        size_t len = strlen(loadedName);
-        while (len > 0 && (loadedName[len - 1] == '\n' || loadedName[len - 1] == '\r'))
-            loadedName[--len] = '\0';
-
-        if (loadedName[0] == '\0') continue;
-
-        strncpy(leaderboard[leaderboardCount].name, loadedName, PLAYER_NAME_MAX - 1);
-        leaderboard[leaderboardCount].name[PLAYER_NAME_MAX - 1] = '\0';
-        leaderboard[leaderboardCount].score = loadedScore;
-        leaderboardCount++;
-    }
+    for (int i = 0; i < MAX_SCORES; i++)
+        if (fscanf(file, "%23s %d", leaderboard[i].name, &leaderboard[i].score) != 2)
+            break;
 
     fclose(file);
 }
 
+
+
+
+
 void SortLeaderboard(void)
 {
-    for (int i = 0; i < leaderboardCount - 1; i++)
+    for (int i = 0; i < MAX_SCORES - 1; i++)
     {
-        for (int j = i + 1; j < leaderboardCount; j++)
+        for (int j = i + 1; j < MAX_SCORES; j++)
         {
             if (leaderboard[j].score > leaderboard[i].score)
             {
@@ -183,91 +152,52 @@ void SortLeaderboard(void)
     }
 }
 
-void AddScore(const char *name, int finalScore)
+
+
+
+
+void AddScore(const char *name, int s)
 {
-    if (finalScore <= 0) return;
-
-    if (leaderboardCount < MAX_SCORES)
-    {
-        strncpy(leaderboard[leaderboardCount].name, name, PLAYER_NAME_MAX - 1);
-        leaderboard[leaderboardCount].name[PLAYER_NAME_MAX - 1] = '\0';
-        leaderboard[leaderboardCount].score = finalScore;
-        leaderboardCount++;
-    }
-    else
-    {
-        SortLeaderboard();
-        if (finalScore <= leaderboard[leaderboardCount - 1].score) return;
-
-        strncpy(leaderboard[leaderboardCount - 1].name, name, PLAYER_NAME_MAX - 1);
-        leaderboard[leaderboardCount - 1].name[PLAYER_NAME_MAX - 1] = '\0';
-        leaderboard[leaderboardCount - 1].score = finalScore;
-    }
-
+    if (s <= leaderboard[MAX_SCORES - 1].score) return;   
+    strcpy(leaderboard[MAX_SCORES - 1].name, name);
+    leaderboard[MAX_SCORES - 1].score = s;
     SortLeaderboard();
     SaveLeaderboard();
 }
 
-/* -------------------- Assets -------------------- */
-Texture2D blockTexture = {0};
-Font gamefont = {0};
-Music music = {0};
-Music gameoverMusic = {0};
-Sound moveSound = {0};
-Sound rotateSound = {0};
-Sound lineSound = {0};
-Sound dropSound = {0};
-Sound gameoverSound = {0};
 
-bool blockTextureLoaded = false;
-bool fontLoaded = false;
-bool musicLoaded = false;
-bool gameoverMusicLoaded = false;
-bool moveSoundLoaded = false;
-bool rotateSoundLoaded = false;
-bool lineSoundLoaded = false;
-bool dropSoundLoaded = false;
-bool gameoverSoundLoaded = false;
 
-void PlayEffect(Sound *sound, bool loaded)
-{
-    if (!muted && loaded)
-        PlaySound(*sound);
-}
 
-void SetGameMusicVolume(void)
-{
-    if (musicLoaded)
-        SetMusicVolume(music, muted ? 0.0f : 0.45f);
-    if (gameoverMusicLoaded)
-        SetMusicVolume(gameoverMusic, muted ? 0.0f : 0.55f);
-}
 
-/* -------------------- Drawing -------------------- */
+Music music;
+Music gameoverMusic;
+Sound moveSound;
+Sound rotateSound;
+Sound lineSound;
+Sound dropSound;
+Sound gameoverSound;
+
+
+
+
+
+
+//Drawing...
 void DrawBlockWithShade(int x, int y, Color color)
 {
-    if (blockTextureLoaded)
-    {
-        DrawTexturePro(blockTexture,
-                       (Rectangle){0, 0, (float)blockTexture.width, (float)blockTexture.height},
-                       (Rectangle){(float)x, (float)y, BLOCK_SIZE, BLOCK_SIZE},
-                       (Vector2){0, 0}, 0.0f, color);
-        DrawRectangleLines(x, y, BLOCK_SIZE, BLOCK_SIZE, BLACK);
-        return;
-    }
-
+    
     DrawRectangle(x, y, BLOCK_SIZE, BLOCK_SIZE, color);
 
     Color lightShade = {
-        (unsigned char)((color.r + 255) / 2),
-        (unsigned char)((color.g + 255) / 2),
-        (unsigned char)((color.b + 255) / 2),
+        ((color.r + 255) / 2),
+        ((color.g + 255) / 2),
+        ((color.b + 255) / 2),
         255
     };
     Color darkShade = {
-        (unsigned char)(color.r / 2),
-        (unsigned char)(color.g / 2),
-        (unsigned char)(color.b / 2),
+        (color.r / 2),
+        (color.g / 2),
+        (color.b / 2),
         255
     };
 
@@ -275,6 +205,12 @@ void DrawBlockWithShade(int x, int y, Color color)
     DrawRectangle(x, y + BLOCK_SIZE - 5, BLOCK_SIZE, 5, darkShade);
     DrawRectangleLines(x, y, BLOCK_SIZE, BLOCK_SIZE, BLACK);
 }
+
+
+
+
+
+
 
 void DrawPiece(Piece *piece)
 {
@@ -285,7 +221,7 @@ void DrawPiece(Piece *piece)
     {
         for (int col = 0; col < 4; col++)
         {
-            if (piece->shape[row][col])
+            if (piece->shape[row][col]==1)
             {
                 int x = startX + (piece->x + col) * BLOCK_SIZE;
                 int y = startY + (piece->y + row) * BLOCK_SIZE;
@@ -294,6 +230,10 @@ void DrawPiece(Piece *piece)
         }
     }
 }
+
+
+
+
 
 void DrawNextBlockPreview(int type)
 {
@@ -308,21 +248,22 @@ void DrawNextBlockPreview(int type)
         for (int col = 0; col < 4; col++)
         {
             if (shapes[type][row][col])
-                DrawBlockWithShade(startX + col * BLOCK_SIZE,
-                                   startY + row * BLOCK_SIZE,
-                                   pieceColors[type]);
+                DrawBlockWithShade(startX + col * BLOCK_SIZE,startY + row * BLOCK_SIZE,pieceColors[type]);
         }
     }
 }
+
+
+
+
+
 
 void DrawBoard(void)
 {
     int startX = 50;
     int startY = 20;
 
-    DrawRectangleLinesEx((Rectangle){45, 15, COLS * BLOCK_SIZE + 10,
-                                    ROWS * BLOCK_SIZE + 10},
-                         5, (Color){0, 50, 100, 255});
+    DrawRectangleLinesEx((Rectangle){45, 15, COLS * BLOCK_SIZE + 10, ROWS * BLOCK_SIZE + 10},5, (Color){0, 50, 100, 255});
 
     for (int row = 0; row < ROWS; row++)
     {
@@ -334,9 +275,9 @@ void DrawBoard(void)
             if (board[row][col] != 0)
             {
                 int type = board[row][col] - 1;
-                if (type >= 0 && type < 7)
-                    DrawBlockWithShade(x, y, pieceColors[type]);
+                DrawBlockWithShade(x, y, pieceColors[type]);
             }
+
             else
             {
                 DrawRectangle(x, y, BLOCK_SIZE, BLOCK_SIZE, DARKGRAY);
@@ -346,27 +287,37 @@ void DrawBoard(void)
     }
 }
 
+
+
+
+
+
 void DrawTextCentered(const char *text, int y, int fontSize, Color color)
 {
     int width = MeasureText(text, fontSize);
     DrawText(text, (SCREEN_WIDTH - width) / 2, y, fontSize, color);
 }
 
+
+
+
+
 void DrawBackground(void)
 {
-    DrawRectangleGradientV(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,
-                           (Color){20, 20, 55, 255},
-                           (Color){0, 0, 0, 255});
+    DrawRectangleGradientV(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT,(Color){20, 20, 55, 255},(Color){0, 0, 0, 255});
 }
 
-/* -------------------- Game mechanics -------------------- */
+
+
+
+
 int IsValidPosition(Piece *piece)
 {
     for (int row = 0; row < 4; row++)
     {
         for (int col = 0; col < 4; col++)
         {
-            if (!piece->shape[row][col]) continue;
+            if (piece->shape[row][col]==0) continue;
 
             int boardX = piece->x + col;
             int boardY = piece->y + row;
@@ -383,6 +334,11 @@ int IsValidPosition(Piece *piece)
     return 1;
 }
 
+
+
+
+
+
 void LockPiece(Piece *piece)
 {
     for (int row = 0; row < 4; row++)
@@ -394,47 +350,41 @@ void LockPiece(Piece *piece)
             int boardX = piece->x + col;
             int boardY = piece->y + row;
 
-            if (boardX >= 0 && boardX < COLS &&
-                boardY >= 0 && boardY < ROWS)
-                board[boardY][boardX] = piece->type + 1;
+           board[boardY][boardX] = piece->type + 1;
         }
     }
 }
+
+
+
+
+
 
 int ClearLine(void)
 {
     int cleared = 0;
-
-    for (int row = ROWS - 1; row >= 0; row--)
+    for (int row = 0; row < ROWS; row++)
     {
         int full = 1;
-
         for (int col = 0; col < COLS; col++)
-        {
-            if (board[row][col] == 0)
-            {
-                full = 0;
-                break;
-            }
-        }
+            if (board[row][col] == 0) full = 0;
 
         if (full)
         {
             cleared++;
-
             for (int r = row; r > 0; r--)
                 for (int col = 0; col < COLS; col++)
                     board[r][col] = board[r - 1][col];
-
             for (int col = 0; col < COLS; col++)
                 board[0][col] = 0;
-
-            row++; /* re-check shifted row */
         }
     }
-
     return cleared;
 }
+
+
+
+
 
 void SpawnPiece(Piece *piece)
 {
@@ -449,6 +399,11 @@ void SpawnPiece(Piece *piece)
     memcpy(piece->shape, shapes[type], sizeof(piece->shape));
 }
 
+
+
+
+
+
 void RestartGame(Piece *piece)
 {
     memset(board, 0, sizeof(board));
@@ -459,41 +414,44 @@ void RestartGame(Piece *piece)
     SpawnPiece(piece);
 }
 
+
+
+
+
+
 void RotatePiece(Piece *piece)
 {
     int rotated[4][4] = {0};
     int original[4][4];
     int originalX = piece->x;
-    int originalY = piece->y;
 
-    memcpy(original, piece->shape, sizeof(original));
+    memcpy(original, piece->shape, sizeof(original));   
 
     for (int row = 0; row < 4; row++)
         for (int col = 0; col < 4; col++)
-            rotated[col][3 - row] = piece->shape[row][col];
+            rotated[col][3 - row] = piece->shape[row][col];   
 
-    memcpy(piece->shape, rotated, sizeof(piece->shape));
+    memcpy(piece->shape, rotated, sizeof(rotated));    
 
-    if (IsValidPosition(piece))
+    int offsets[3] = {0, -1, 1};      
+    for (int i = 0; i < 3; i++)
     {
-        PlayEffect(&rotateSound, rotateSoundLoaded);
-        return;
-    }
-
-    for (int offset = -1; offset <= 1; offset++)
-    {
-        piece->x = originalX + offset;
+        piece->x = originalX + offsets[i];
         if (IsValidPosition(piece))
         {
-            PlayEffect(&rotateSound, rotateSoundLoaded);
-            return;
+            PlaySound(rotateSound);
+            return;                 
         }
     }
 
-    memcpy(piece->shape, original, sizeof(piece->shape));
+    memcpy(piece->shape, original, sizeof(original));   
     piece->x = originalX;
-    piece->y = originalY;
 }
+
+
+
+
+
 
 void MovePieceDown(Piece *piece)
 {
@@ -503,19 +461,13 @@ void MovePieceDown(Piece *piece)
     {
         piece->y--;
         LockPiece(piece);
-        PlayEffect(&dropSound, dropSoundLoaded);
+        PlaySound(dropSound);
 
         int cleared = ClearLine();
+        score = score + 100 * cleared;
+        if (cleared > 0) PlaySound(lineSound);
 
-        if (cleared == 1) score += 100;
-        else if (cleared == 2) score += 300;
-        else if (cleared == 3) score += 500;
-        else if (cleared == 4) score += 800;
-
-        if (cleared > 0)
-            PlayEffect(&lineSound, lineSoundLoaded);
-
-        level = 1 + score / 200;
+        level = 1 + score / 300;
         SpawnPiece(piece);
 
         if (!IsValidPosition(piece))
@@ -523,18 +475,14 @@ void MovePieceDown(Piece *piece)
     }
 }
 
+
+
+
+
+
 float GetBaseFallSpeed(void)
 {
-    float speed;
-
-    if (difficulty == EASY)
-        speed = 0.75f;
-    else if (difficulty == HARD)
-        speed = 0.35f;
-    else
-        speed = 0.50f;
-
-    speed -= (level - 1) * 0.05f;
+    float speed = baseSpeed[difficulty] - (level - 1) * 0.05f;
 
     if (speed < 0.08f)
         speed = 0.08f;
@@ -542,24 +490,24 @@ float GetBaseFallSpeed(void)
     return speed;
 }
 
-/* -------------------- Game lifecycle -------------------- */
+
+
+
+
+
 void StartGame(Piece *piece)
 {
     RestartGame(piece);
-    gameover = 0;
     gameState = STATE_PLAYING;
-
-    if (gameoverMusicLoaded)
-        StopMusicStream(gameoverMusic);
-
-    if (musicLoaded)
-    {
-        SetGameMusicVolume();
-        PlayMusicStream(music);
-    }
+    StopMusicStream(gameoverMusic);
+    PlayMusicStream(music);
 }
 
-/* -------------------- Menu drawing -------------------- */
+
+
+
+
+
 void DrawMenu(int selected)
 {
     DrawTextCentered("TETRIS", 85, 72, RED);
@@ -582,9 +530,15 @@ void DrawMenu(int selected)
     }
 
     DrawTextCentered("Use UP/DOWN and ENTER to select", 580, 22, GRAY);
-    DrawTextCentered(TextFormat("Difficulty: %s", DifficultyName(difficulty)),
+    DrawTextCentered(TextFormat("Difficulty: %s",diffName[difficulty]),
                      615, 22, YELLOW);
 }
+
+
+
+
+
+
 
 void DrawDifficultyMenu(int selected)
 {
@@ -599,6 +553,12 @@ void DrawDifficultyMenu(int selected)
 
     DrawTextCentered("UP/DOWN: select    ENTER: confirm    ESC: back", 550, 24, LIGHTGRAY);
 }
+
+
+
+
+
+
 
 void DrawHowToPlay(void)
 {
@@ -626,6 +586,11 @@ void DrawHowToPlay(void)
     DrawTextCentered("ENTER / ESC: back to menu", 590, 25, YELLOW);
 }
 
+
+
+
+
+
 void DrawCredits(void)
 {
     DrawTextCentered("CREDITS", 70, 60, YELLOW);
@@ -643,18 +608,28 @@ void DrawCredits(void)
     DrawTextCentered("ENTER / ESC: back to menu", 595, 25, YELLOW);
 }
 
+
+
+
+
+
 void DrawNameInput(void)
 {
     DrawTextCentered("ENTER YOUR NAME", 105, 55, YELLOW);
     DrawTextCentered("Your score will be saved to the leaderboard", 175, 24, LIGHTGRAY);
     DrawRectangleLinesEx((Rectangle){180, 255, 540, 70}, 3, GREEN);
 
-    const char *displayName = playerNameLength > 0 ? playerName : "_";
+    const char *displayName =playerName[0] != '\0'? playerName : "_";
     DrawTextCentered(displayName, 272, 34, WHITE);
 
     DrawTextCentered("Type your name and press ENTER", 390, 27, LIGHTGRAY);
     DrawTextCentered("BACKSPACE: delete    ESC: cancel", 435, 23, GRAY);
 }
+
+
+
+
+
 
 void DrawScoreResult(void)
 {
@@ -664,43 +639,57 @@ void DrawScoreResult(void)
     DrawTextCentered(TextFormat("SCORE: %d", score), 310, 50, BLUE);
     DrawTextCentered(TextFormat("LEVEL: %d", level), 370, 32, YELLOW);
 
-    if (leaderboardCount > 0 && score >= leaderboard[0].score)
+    if (score > 0 && score >= leaderboard[0].score)
         DrawTextCentered("NEW HIGH SCORE!", 440, 30, GREEN);
     else
-        DrawTextCentered("Your score has been saved.", 440, 26, LIGHTGRAY);
+        DrawTextCentered(TextFormat("HIGH SCORE: %d",leaderboard[0].score), 440, 26, LIGHTGRAY);
 
     DrawTextCentered("ENTER: view leaderboard", 520, 30, WHITE);
     DrawTextCentered("ESC: return to menu", 565, 25, GRAY);
 }
 
+
+
+
+
+
 void DrawLeaderboard(void)
 {
     DrawTextCentered("LEADERBOARD", 65, 60, YELLOW);
 
-    if (leaderboardCount == 0)
+       if (leaderboard[0].score == 0)
     {
         DrawTextCentered("No scores saved yet.", 250, 30, LIGHTGRAY);
     }
     else
     {
-        for (int i = 0; i < leaderboardCount; i++)
+        for (int i = 0; i < MAX_SCORES; i++)
         {
-            int y = 150 + i * 42;
-            DrawText(TextFormat("%2d.", i + 1), 220, y, 28, WHITE);
-            DrawText(leaderboard[i].name, 300, y, 28, LIGHTGRAY);
-            DrawText(TextFormat("%d", leaderboard[i].score), 560, y, 28, GREEN);
+            if (leaderboard[i].score > 0)
+            {
+                int y = 150 + i * 42;
+                DrawText(TextFormat("%2d.", i + 1), 220, y, 28, WHITE);
+                DrawText(leaderboard[i].name, 300, y, 28, LIGHTGRAY);
+                DrawText(TextFormat("%d", leaderboard[i].score), 560, y, 28, GREEN);
+            }
         }
     }
 
     DrawTextCentered("ENTER / ESC: back to menu", 625, 25, YELLOW);
 }
 
+
+
+
+
+
+
 void DrawPlaying(Piece *piece)
 {
     DrawText("TETRIS", 400, 45, 42, RED);
     DrawText(TextFormat("SCORE: %d", score), 400, 120, 32, BLUE);
     DrawText(TextFormat("LEVEL: %d", level), 400, 165, 32, YELLOW);
-    DrawText(TextFormat("DIFFICULTY: %s", DifficultyName(difficulty)),
+    DrawText(TextFormat("DIFFICULTY: %s", diffName[difficulty]),
              400, 210, 24, GREEN);
 
 
@@ -727,35 +716,31 @@ void DrawPlaying(Piece *piece)
 
 
 
-//Main
+
+
+
+
 int main(void)
 {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "WELCOME TO TETRIS");
     InitAudioDevice();
     SetTargetFPS(60);
     SetExitKey(KEY_NULL);
-    SetRandomSeed((unsigned int)GetTime());
+    SetRandomSeed(GetTime());
 
-    if (FileExists("Fredoka-Bold.ttf"))
-    {
-        gamefont = LoadFont("Fredoka-Bold.ttf");
-        fontLoaded = true;
-    }
+    music = LoadMusicStream("music_2.mp3");
+    music.looping = true;
+    SetMusicVolume(music, 0.45f);
 
+    gameoverMusic = LoadMusicStream("heavenly_gameover.mp3");
+    gameoverMusic.looping = false;
 
-    if (FileExists("music.mp3"))
-    {
-        music = LoadMusicStream("music_2.mp3");
-        music.looping = true;
-        musicLoaded = true;
-    }
-
-    if (FileExists("heavenly_gameover.mp3"))
-    {
-        gameoverMusic = LoadMusicStream("heavenly_gameover.mp3");
-        gameoverMusic.looping = false;
-        gameoverMusicLoaded = true;
-    }
+    
+    
+    rotateSound   = LoadSound("rotate.wav");
+    lineSound     = LoadSound("line.wav");
+    dropSound     = LoadSound("drop.wav");
+    
 
     LoadLeaderboard();
 
@@ -766,17 +751,21 @@ int main(void)
 
     float fallTimer = 0.0f;
     int menuSelection = 0;
-    int difficultySelection = (int)difficulty;
+    int difficultySelection=difficulty;
+
+
+
+
 
     while (!WindowShouldClose())
     {
 
-        /* -------------------- Global controls -------------------- */
-        if (IsKeyPressed(KEY_M))
-{
-    muted = !muted;
-    SetGameMusicVolume();
-}
+        
+         if (IsKeyPressed(KEY_M))
+        {
+            muted = !muted;
+            SetMasterVolume(muted ? 0.0f : 1.0f);
+        }
 
         if (gameState == STATE_MENU)
         {
@@ -788,16 +777,15 @@ int main(void)
 
             if (IsKeyPressed(KEY_ENTER))
             {
-                if (menuSelection == 0)
+                 if (menuSelection == 0)
                 {
                     playerName[0] = '\0';
-                    playerNameLength = 0;
-                    scoreSavedForCurrentGame = false;
                     gameState = STATE_NAME_INPUT;
                 }
+
                 else if (menuSelection == 1)
                 {
-                    difficultySelection = (int)difficulty;
+                    difficultySelection=difficulty;
                     gameState = STATE_DIFFICULTY;
                 }
                 else if (menuSelection == 2)
@@ -810,6 +798,10 @@ int main(void)
                     break;
             }
         }
+
+
+
+        
         else if (gameState == STATE_DIFFICULTY)
         {
             if (IsKeyPressed(KEY_DOWN))
@@ -819,167 +811,156 @@ int main(void)
 
             if (IsKeyPressed(KEY_ENTER))
             {
-                difficulty = (Difficulty)difficultySelection;
+               difficulty = difficultySelection;
                 gameState = STATE_MENU;
             }
             if (IsKeyPressed(KEY_ESCAPE))
                 gameState = STATE_MENU;
         }
-        else if (gameState == STATE_HOW_TO_PLAY ||
-                 gameState == STATE_CREDITS ||
-                 gameState == STATE_LEADERBOARD)
+
+
+
+
+        else if (gameState == STATE_HOW_TO_PLAY || gameState == STATE_CREDITS || gameState == STATE_LEADERBOARD)
         {
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_ESCAPE))
                 gameState = STATE_MENU;
         }
+
+
+
+        
         else if (gameState == STATE_NAME_INPUT)
         {
             int key = GetCharPressed();
             while (key > 0)
             {
-                if (key >= 32 && key <= 126 && playerNameLength < PLAYER_NAME_MAX - 1)
+                int len = strlen(playerName);
+                if (key >= 33 && key <= 126 && len < PLAYER_NAME_MAX - 1)   // 33 মানে space ঢুকবে না
                 {
-                    playerName[playerNameLength++] = (char)key;
-                    playerName[playerNameLength] = '\0';
+                    playerName[len] = (char)key;
+                    playerName[len + 1] = '\0';
                 }
                 key = GetCharPressed();
             }
 
-            if (IsKeyPressed(KEY_BACKSPACE) && playerNameLength > 0)
-                playerName[--playerNameLength] = '\0';
+            int len = strlen(playerName);
 
-            if (IsKeyPressed(KEY_ENTER) && playerNameLength > 0)
+            if (IsKeyPressed(KEY_BACKSPACE) && len > 0)
+                playerName[len - 1] = '\0';
+
+            if (IsKeyPressed(KEY_ENTER) && len > 0)
             {
                 StartGame(&piece);
                 fallTimer = 0.0f;
-                scoreSavedForCurrentGame = false;
             }
 
             if (IsKeyPressed(KEY_ESCAPE))
             {
                 playerName[0] = '\0';
-                playerNameLength = 0;
                 gameState = STATE_MENU;
             }
         }
+
+
+
+
+
         else if (gameState == STATE_PLAYING)
         {
-            if(IsKeyPressed(KEY_P))
+            if (IsKeyPressed(KEY_P))
             {
-                if(paused==0)
-                   paused=1;
-                else 
-                  paused=0;
-
-                if(paused==1)
-                {
-                    if(musicLoaded) PauseMusicStream(music);
-                }
-                else
-                {
-                    if(musicLoaded) ResumeMusicStream(music);
-                }
+                paused = !paused;
+                if (paused) PauseMusicStream(music);
+                else ResumeMusicStream(music);
             }
 
-         if(paused==0)
-         {
-            if (IsKeyPressed(KEY_X))
+            if (paused==0)
             {
-                if (musicLoaded) StopMusicStream(music);
-                gameState = STATE_MENU;
-            }
+                if (IsKeyPressed(KEY_X))
+                {
+                    StopMusicStream(music);
+                    gameState = STATE_MENU;
+                }
 
-            if (musicLoaded)
-            {
+                if (IsKeyPressed(KEY_N))
+                   nextpiecetype = GetRandomValue(0, 6);
+
                 UpdateMusicStream(music);
-                SetGameMusicVolume();
-            }
 
-            if (IsKeyPressed(KEY_LEFT))
-            {
-                piece.x--;
-                if (!IsValidPosition(&piece)) piece.x++;
-                else PlayEffect(&moveSound, moveSoundLoaded);
-            }
-
-            if (IsKeyPressed(KEY_RIGHT))
-            {
-                piece.x++;
-                if (!IsValidPosition(&piece)) piece.x--;
-                else PlayEffect(&moveSound, moveSoundLoaded);
-            }
-
-            if (IsKeyPressed(KEY_UP))
-                RotatePiece(&piece);
-
-            if (IsKeyPressed(KEY_DOWN))
-            {
-                MovePieceDown(&piece);
-                fallTimer = 0.0f;
-            }
-
-
-            if(IsKeyPressed(KEY_N))
-            {
-                nextpiecetype=GetRandomValue(0,6);
-            }
-
-            float fallSpeed = GetBaseFallSpeed();
-            if (IsKeyDown(KEY_SPACE))
-                fallSpeed = 0.035f;
-
-            fallTimer += GetFrameTime();
-            if (fallTimer >= fallSpeed)
-            {
-                fallTimer = 0.0f;
-                MovePieceDown(&piece);
-            }
-          
-            if (gameover)
-            {
-                if (musicLoaded) StopMusicStream(music);
-
-                if (gameoverMusicLoaded)
+                if (IsKeyPressed(KEY_LEFT))
                 {
-                    SetGameMusicVolume();
+                    piece.x--;
+                    if (!IsValidPosition(&piece)) piece.x++;
+                    else PlaySound(moveSound);
+                }
+
+                if (IsKeyPressed(KEY_RIGHT))
+                {
+                    piece.x++;
+                    if (!IsValidPosition(&piece)) piece.x--;
+                    else PlaySound(moveSound);
+                }
+
+                if (IsKeyPressed(KEY_UP))
+                    RotatePiece(&piece);
+
+                if (IsKeyPressed(KEY_DOWN))
+                {
+                    MovePieceDown(&piece);
+                    fallTimer = 0.0;
+                }
+
+                float fallSpeed = GetBaseFallSpeed();
+                if (IsKeyDown(KEY_SPACE))
+                    fallSpeed = 0.035;
+
+                fallTimer += GetFrameTime();
+                if (fallTimer >= fallSpeed)
+                {
+                    fallTimer = 0.0;
+                    MovePieceDown(&piece);
+                }
+
+                if (gameover==1)
+                {
+                    StopMusicStream(music);
                     PlayMusicStream(gameoverMusic);
-                }
-
-                PlayEffect(&gameoverSound, gameoverSoundLoaded);
-
-                if (!scoreSavedForCurrentGame)
-                {
+                    PlaySound(gameoverSound);
                     AddScore(playerName, score);
-                    scoreSavedForCurrentGame = true;
+                    gameState = STATE_SCORE_RESULT;
                 }
-
-                gameState = STATE_SCORE_RESULT;
             }
-          }
         }
+
+
+
+
         else if (gameState == STATE_SCORE_RESULT)
         {
-            if (gameoverMusicLoaded)
-                UpdateMusicStream(gameoverMusic);
+            UpdateMusicStream(gameoverMusic);
 
             if (IsKeyPressed(KEY_ENTER))
             {
-                if (gameoverMusicLoaded) StopMusicStream(gameoverMusic);
+                StopMusicStream(gameoverMusic);
                 gameState = STATE_LEADERBOARD;
             }
             else if (IsKeyPressed(KEY_ESCAPE))
             {
-                if (gameoverMusicLoaded) StopMusicStream(gameoverMusic);
+                StopMusicStream(gameoverMusic);
                 gameState = STATE_MENU;
             }
         }
+
+
+
 
         BeginDrawing();
         DrawBackground();
 
         switch (gameState)
         {
-            case STATE_MENU:          DrawMenu(menuSelection); break;
+            case STATE_MENU:         DrawMenu(menuSelection); break;
             case STATE_DIFFICULTY:   DrawDifficultyMenu(difficultySelection); break;
             case STATE_HOW_TO_PLAY:  DrawHowToPlay(); break;
             case STATE_CREDITS:      DrawCredits(); break;
@@ -995,15 +976,14 @@ int main(void)
         EndDrawing();
     }
 
-    if (musicLoaded) UnloadMusicStream(music);
-    if (gameoverMusicLoaded) UnloadMusicStream(gameoverMusic);
-    if (moveSoundLoaded) UnloadSound(moveSound);
-    if (rotateSoundLoaded) UnloadSound(rotateSound);
-    if (lineSoundLoaded) UnloadSound(lineSound);
-    if (dropSoundLoaded) UnloadSound(dropSound);
-    if (gameoverSoundLoaded) UnloadSound(gameoverSound);
-    if (blockTextureLoaded) UnloadTexture(blockTexture);
-    if (fontLoaded) UnloadFont(gamefont);
+
+    UnloadMusicStream(music);
+    UnloadMusicStream(gameoverMusic);
+    UnloadSound(moveSound);
+    UnloadSound(rotateSound);
+    UnloadSound(lineSound);
+    UnloadSound(dropSound);
+    UnloadSound(gameoverSound);
 
     CloseAudioDevice();
     CloseWindow();
