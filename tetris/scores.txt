@@ -1,0 +1,2 @@
+shafin	400
+PLAYER	100
