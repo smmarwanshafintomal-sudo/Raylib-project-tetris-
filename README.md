@@ -55,5 +55,5 @@ The game stores the top scores in `tetris/scores.txt`, so player scores persist 
 
 ## Credits
 
-This project was created by S M Marwan Shafin Tomal and Tayeaba Sorowar under the supervisor of Mohammad Sadat Hossain Sir.
+This project was created by S M Marwan Shafin Tomal and Tayeaba under the supervisor of Mohammad Sadat Hossain Sir.
 
